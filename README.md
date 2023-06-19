@@ -8,7 +8,7 @@ Command line: Run `main.py` directly or with `--file=filename.jpg` or `--dir=dir
 GUI: Run `gui_simple.py`
 
 # To-do
-- [ ] Image preview in GUI with
+- [ ] Image preview in GUI
 - [ ] Ability to accept/reject filename
 - [ ] Rename existing files instead of copying
 - [ ] Object/content recognition (maybe)
