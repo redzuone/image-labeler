@@ -10,3 +10,5 @@ GUI: Run `gui.py`
 # Libraries used
 - PaddleOCR
 - PySimpleGUI
+
+![Demo](./demo.gif)

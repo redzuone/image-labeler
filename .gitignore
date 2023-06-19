@@ -3,6 +3,7 @@ output/
 test/
 *.ttf
 test*.py
+tmp*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
