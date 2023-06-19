@@ -24,12 +24,11 @@ def main():
             else:
                 window['path'].update(img_path)
                 window['status'].update('Processing...')
-                #text, result = process_single_file(img_path)
                 window.perform_long_operation(lambda: process_single_file(img_path), 'single_file_done')
-                #window['status'].update('Text extracted: ' + text)
         elif event == 'single_file_done':
             text, result = values[event]
             window['status'].update('Text extracted: ' + text)
+            
             if show_image_flag == True:
                 img_path = window['path'].get()
                 show_image(img_path, result)
@@ -41,8 +40,6 @@ def main():
                 window['path'].update(folder_path)
                 window['status'].update('Processing...')
                 window.perform_long_operation(lambda: process_images_in_folder(folder_path), 'folder_done')
-            #process_images_in_folder(folder_path)
-            #window['status'].update('Done, files are saved in output folder')
         elif event == 'folder_done':
             window['status'].update('Done, files are saved in output folder')
 

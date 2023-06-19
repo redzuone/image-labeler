@@ -10,11 +10,14 @@ ocr = None
 show_image_flag = False
 
 def menu():
+    """
+    Display menu for command line interface
+    """
     print('\n\nImage Labeler\n  1. Process a file\n  2. Process a folder\n  3. Exit\n')
     choice = input('Enter your choice: ')
     if int(choice) == 1:
         image_name = input('Enter file name: ')
-        text = process_single_file(image_name)
+        process_single_file(image_name)
     elif int(choice) == 2:
         folder_name = input('Enter folder name: ')
         process_images_in_folder(folder_name)
@@ -22,6 +25,12 @@ def menu():
         exit()
 
 def process_single_file(image_name):
+    """
+    Process a single image file
+    """
+    if not is_supported_file(image_name):
+        print(f'File {image_name} is not an image')
+        return
     load_model()
     try:
         text, result = extract_text(image_name)
@@ -30,22 +39,38 @@ def process_single_file(image_name):
     except Exception as e:
         print(f'An error occured: {e}')
         exit()
-        # menu()
 
 def process_images_in_folder(folder_name):
+    """
+    Process all images in a folder
+    """
     # get all files in folder
     files = os.listdir(folder_name)
     # loop through files
-    supported_files = ['.jpg', '.png', '.jpeg', '.webp', '.heic']
     for file in files:
         # check if file is an image
-        if file.endswith(tuple(supported_files)):
-            # process file
+        if is_supported_file(file):
             image_name = os.path.join(folder_name, file)
             text, _ = process_single_file(image_name)
             save_image(image_name, text)
+        else:
+            print(f'----------------------------\n{file} is not an image')
+            continue
+
+def is_supported_file(file_name):
+    """
+    Check if file is an image
+    """
+    supported_files = ['.jpg', '.png', '.jpeg', '.webp', '.heic']
+    if file_name.endswith(tuple(supported_files)):
+        return True
+    else:
+        return False
 
 def extract_text(img_path):
+    """
+    Extract text from image and clean it
+    """
     print('----------------------------\nImage: ' + img_path)
     result = ocr.ocr(img_path, cls=True)
     if show_image_flag == True:
@@ -62,15 +87,17 @@ def extract_text(img_path):
     # Clean text
     pattern = r'[^a-zA-Z0-9\s]'  # Regular expression pattern to match non-alphanumeric characters
     cleaned_text = re.sub(pattern, '', text)
-    text = re.sub(r'\s+', ' ', text) # replace multiple spaces with one
+    cleaned_text = re.sub(r'\s+', ' ', cleaned_text) # replace multiple spaces with one
     if len(cleaned_text) > 200:
         cleaned_text = cleaned_text[:200]
     print('Cleaned text: ' + cleaned_text)
     return cleaned_text, result
 
 def save_image(image_name, text):
-    print('\n\n'+text+'\n\n')
-    #text = text.replace(' ', '_') # replace spaces with underscores
+    """
+    Save image with new name
+    """
+    text = text.replace(' ', '_') # replace spaces with underscores
     try:
         new_image = text + os.path.splitext(image_name)[1] # new file name with extension
         print('File name: ' + new_image)
@@ -82,7 +109,6 @@ def save_image(image_name, text):
     except Exception as e:
         print(f'An error occured: {e}')
         exit()
-        #menu()
 
 def load_model():
     global ocr
@@ -91,6 +117,9 @@ def load_model():
         print('Model loaded')
 
 def show_image(img_path, result):
+    """
+    Show image with bounding boxes using matplotlib
+    """
     result = result[0]
     image = Image.open(img_path).convert('RGB')
     boxes = [line[0] for line in result]
@@ -108,7 +137,6 @@ if __name__ == '__main__':
     parser.add_argument('--dir', help='Folder name to process')
     parser.add_argument('--file', help='File name to process')
     args = parser.parse_args()
-
     if args.dir:
         process_images_in_folder(args.dir)
     elif args.file:
