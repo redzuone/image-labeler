@@ -35,6 +35,7 @@ def process_single_file(image_name):
     try:
         text, result = extract_text(image_name)
         save_image(image_name, text)
+        #rename_file(image_name, text)
         return text, result
     except Exception as e:
         print(f'An error occured: {e}')
@@ -106,6 +107,21 @@ def save_image(image_name, text):
         os.makedirs(output_directory, exist_ok=True) # create directory if it doesn't exist
         new_file_path = os.path.join(output_directory, new_image) # create new file path
         shutil.copy2(image_name, new_file_path) # copy file to new path
+    except Exception as e:
+        print(f'An error occured: {e}')
+        exit()
+
+def rename_file(image_name, text):
+    """
+    Rename file with new name
+    """
+    text = text.replace(' ', '_') # replace spaces with underscores
+    try:
+        new_image = text + os.path.splitext(image_name)[1] # new file name with extension
+        print('File name: ' + new_image)
+        directory = os.path.dirname(image_name) # get directory
+        new_file_path = os.path.join(directory, new_image) # create new file path
+        os.rename(image_name, new_file_path) # rename file
     except Exception as e:
         print(f'An error occured: {e}')
         exit()
