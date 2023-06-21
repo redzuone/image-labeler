@@ -8,7 +8,7 @@ import argparse
 
 ocr = None
 show_image_flag = False
-
+rename_file_flag = False
 def menu():
     """
     Display menu for command line interface
@@ -35,7 +35,11 @@ def process_single_file(image_name):
     try:
         text, result = extract_text(image_name)
         save_image(image_name, text)
-        #rename_file(image_name, text)
+        if rename_file_flag is not None:
+            if rename_file_flag == True:
+                rename_file(image_name, text)
+        else:
+            save_image(image_name, text)
         return text, result
     except Exception as e:
         print(f'An error occured: {e}')

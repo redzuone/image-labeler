@@ -4,13 +4,15 @@ from paddleocr import draw_ocr
 from PIL import Image
 
 show_image_flag = False
+rename_file_flag = False
 def main():
-    global show_image_flag
+    global show_image_flag, rename_file_flag
     sg.theme('DarkAmber')
     layout = [[sg.Button('Process a file')],
                 [sg.Button('Process a folder')],
                 [sg.Text('Path: ', key='path')],
                 [sg.Checkbox('Show image result (single image)', enable_events=True, key='show_image_event')],
+                [sg.Checkbox('Rename file directly', enable_events=True, key='rename_file_event')],
                 [sg.Text('Status: '), sg.Text('Ready', key='status')],
                 [sg.Col([[sg.T('Results')]], scrollable=True, key='-COL-', s=(1280,720))],]
     window = sg.Window('Image Labeler', layout, size=(1280, 720))
@@ -20,6 +22,8 @@ def main():
             break
         if event == 'show_image_event':
             show_image_flag = window['show_image_event'].get()
+        elif event == 'rename_file_event':
+            rename_file_flag = window['rename_file_event'].get()
         elif event == 'Process a file':
             img_path = sg.popup_get_file('Pick file')
             if not img_path:
