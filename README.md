@@ -13,6 +13,7 @@ GUI: Run `gui_simple.py`
 - [ ] Rename existing files instead of copying
 - [ ] Object/content recognition (maybe)
 - [ ] Add more comments
+- [ ] Clean code 🤓
 
 # Libraries used
 - PaddleOCR

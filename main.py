@@ -5,6 +5,7 @@ import os
 import shutil
 from paddleocr import PaddleOCR, draw_ocr
 import argparse
+import logging
 
 ocr = None
 show_image_flag = False
@@ -24,25 +25,24 @@ def menu():
     elif int(choice) == 3:
         exit()
 
-def process_single_file(image_name):
+def process_single_file(image_path, rename_file_flag=False):
     """
     Process a single image file
     """
-    if not is_supported_file(image_name):
-        print(f'File {image_name} is not an image')
+    if not is_supported_file(image_path):
+        logging.warning(f'File {image_path} is not an image')
         return
     load_model()
     try:
-        text, result = extract_text(image_name)
-        save_image(image_name, text)
-        if rename_file_flag is not None:
-            if rename_file_flag == True:
-                rename_file(image_name, text)
+        text, result = extract_text(image_path)
+        save_image_box_gui(image_path, result)
+        if rename_file_flag == True:
+            rename_file(image_path, text)
         else:
-            save_image(image_name, text)
+            save_image(image_path, text)
         return text, result
     except Exception as e:
-        print(f'An error occured: {e}')
+        logging.error(f'An error occured: {e}')
         exit()
 
 def process_images_in_folder(folder_name):
@@ -56,7 +56,7 @@ def process_images_in_folder(folder_name):
         # check if file is an image
         if is_supported_file(file):
             image_name = os.path.join(folder_name, file)
-            text, _ = process_single_file(image_name)
+            text, _ = process_single_file(image_name, rename_file_flag)
             save_image(image_name, text)
         else:
             print(f'----------------------------\n{file} is not an image')
@@ -84,57 +84,82 @@ def extract_text(img_path):
     text_list = [line[1][0] for box in result for line in box] # bozes > 2 lines
     # Join texts into a single string
     text = ' '.join(text_list)
-    print('Recognized text: ' + text)
+    logging.info(f'Recognized text: {text}')
     # confidence
     confidence_list = [line[1][1] for box in result for line in box]
     confidence = round(sum(confidence_list) / len(confidence_list), 3)
-    print('Confidence: ' + str(confidence))
+    logging.info(f'Confidence: {confidence}')
     # Clean text
     pattern = r'[^a-zA-Z0-9\s]'  # Regular expression pattern to match non-alphanumeric characters
     cleaned_text = re.sub(pattern, '', text)
     cleaned_text = re.sub(r'\s+', ' ', cleaned_text) # replace multiple spaces with one
     if len(cleaned_text) > 200:
         cleaned_text = cleaned_text[:200]
-    print('Cleaned text: ' + cleaned_text)
+    logging.info(f'Cleaned text: {cleaned_text}')
     return cleaned_text, result
 
-def save_image(image_name, text):
+def save_image(image_path, text):
     """
     Save image with new name
     """
     text = text.replace(' ', '_') # replace spaces with underscores
     try:
-        new_image = text + os.path.splitext(image_name)[1] # new file name with extension
-        print('File name: ' + new_image)
-        directory = os.path.dirname(image_name) # get directory
+        directory = os.path.dirname(image_path) # get directory
         output_directory = os.path.join(directory, 'output') # create output directory
         os.makedirs(output_directory, exist_ok=True) # create directory if it doesn't exist
-        new_file_path = os.path.join(output_directory, new_image) # create new file path
-        shutil.copy2(image_name, new_file_path) # copy file to new path
+        new_image_filename = text + os.path.splitext(image_path)[1] # new file name with extension
+        logging.info(f'New file name: {new_image_filename}')
+        new_file_path = os.path.join(output_directory, new_image_filename) # create new file path
+        logging.debug(f'New file path: {new_file_path}')
+        shutil.copy2(image_path, new_file_path) # copy file to new path
     except Exception as e:
-        print(f'An error occured: {e}')
+        logging.error(f'An error occured: {e}')
         exit()
 
-def rename_file(image_name, text):
+def rename_file(image_path, text):
     """
     Rename file with new name
     """
     text = text.replace(' ', '_') # replace spaces with underscores
     try:
-        new_image = text + os.path.splitext(image_name)[1] # new file name with extension
-        print('File name: ' + new_image)
-        directory = os.path.dirname(image_name) # get directory
-        new_file_path = os.path.join(directory, new_image) # create new file path
-        os.rename(image_name, new_file_path) # rename file
+        directory = os.path.dirname(image_path) # get directory
+        new_image_filename = text + os.path.splitext(image_path)[1] # new file name with extension
+        logging.info(f'New file name: {new_image_filename}')
+        new_file_path = os.path.join(directory, new_image_filename) # create new file path
+        logging.debug(f'New file path: {new_file_path}')
+        os.rename(image_path, new_file_path) # rename file
     except Exception as e:
-        print(f'An error occured: {e}')
+        logging.error(f'An error occured: {e}')
         exit()
+
+def save_image_box_gui(img_path, result):
+    """
+    Save temp image with bounding boxes
+    """
+    result = result[0]
+    image = Image.open(img_path).convert('RGB')
+    boxes = [line[0] for line in result]
+    txts = [line[1][0] for line in result]
+    scores = [line[1][1] for line in result]
+    im_show = draw_ocr(image, boxes, txts, scores, font_path='Roboto-Regular.ttf')
+    im_show = Image.fromarray(im_show)
+
+    # Calculate new width based on new height and original aspect ratio
+    new_height = 300
+    aspect_ratio = im_show.width / im_show.height
+    new_width = int(aspect_ratio * new_height)
+    
+    # Resize image while maintaining aspect ratio
+    im_show = im_show.resize((new_width, new_height))
+
+    im_show.save('tmp.png')
 
 def load_model():
     global ocr
     if ocr is None:
+        logging.info('Loading model..')
         ocr = PaddleOCR(use_angle_cls=True, lang='en', show_log=False) # need to run only once to download and load model into memory
-        print('Model loaded')
+        logging.info('Model loaded')
 
 def show_image(img_path, result):
     """
@@ -153,14 +178,19 @@ def show_image(img_path, result):
     plt.show()
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG, format='%(levelname)s: %(message)s')
     parser = argparse.ArgumentParser(description='Image Labeler')
     parser.add_argument('--dir', help='Folder name to process')
     parser.add_argument('--file', help='File name to process')
+    parser.add_argument('--rename', help='Rename file with extracted text', action='store_true')
     args = parser.parse_args()
+
+    if args.rename:
+        rename_file_flag = True
     if args.dir:
         process_images_in_folder(args.dir)
     elif args.file:
-        process_single_file(args.file)
+        process_single_file(args.file, rename_file_flag)
     else:
         menu()
     exit()
