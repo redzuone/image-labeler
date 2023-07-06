@@ -10,6 +10,8 @@ import logging
 ocr = None
 show_image_flag = False
 rename_file_flag = False
+manual_mode_flag = False
+
 def menu():
     """
     Display menu for command line interface
@@ -36,10 +38,11 @@ def process_single_file(image_path, rename_file_flag=False):
     try:
         text, result = extract_text(image_path)
         save_image_box_gui(image_path, result)
-        if rename_file_flag == True:
-            rename_file(image_path, text)
-        else:
-            save_image(image_path, text)
+        if manual_mode_flag == False:
+            if rename_file_flag == True:
+                rename_file(image_path, text)
+            else:
+                save_image(image_path, text)
         return text, result
     except Exception as e:
         logging.error(f'An error occured: {e}')
