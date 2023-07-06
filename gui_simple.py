@@ -41,12 +41,14 @@ def main():
         elif event == 'single_file_done':
             text, result = values[event]
             window['status'].update('Done')
+            print('new file index ' + str(img_count))
             window.extend_layout(window['-COL-'], [[sg.Image(filename='tmp.png', size=(None, 300))],
                                                    [sg.Text('File: ' + img_path)],
                                                    [sg.Text('Text: ' + text)],
-                                                   [sg.Button('Rename file', key='rename_' + text), sg.Button('Reject', key='reject')],
+                                                   [sg.Button('Rename file', key='rename_' + str(img_count)), sg.Button('Reject', key='reject')],
                                                    [sg.Text('', key='new_img_path')]])
-            #img_data.append({}
+            img_data.append({ 'img_path': img_path, 'text': text, 'result': result })
+            img_count += 1
             window.visibility_changed()
             window['-COL-'].contents_changed()
             if show_image_flag == True:
@@ -54,19 +56,24 @@ def main():
                 show_image(img_path, result)
         
         elif event.startswith('rename'):
-            _, img_text = event.split('_')
-            text = text.replace(' ', '_')
+            _, img_index = event.split('_')
+            img_index = int(img_index)
+            print('rename file at ' + str(img_index))
+            img_text = img_data[img_index]['text']
+            img_path = img_data[img_index]['img_path']
             # Save the image. call def rename_file(image_path, text):
             # to get img_path, need a storage that pair img_path with text
             # need t
             rename_file(img_path, img_text)
             directory = os.path.dirname(img_path)
-            new_img_filename = text + os.path.splitext(img_path)[1]
+            img_text = img_text.replace(' ', '_')
+            new_img_filename = img_text + os.path.splitext(img_path)[1]
             new_img_path = os.path.join(directory, new_img_filename)
             print(new_img_path)
             if os.path.exists(new_img_path):
                 window['new_img_path'].update('Output: ' + new_img_path)
                 # rename and disable button
+                window['rename_' + str(img_index)].update(disabled=True)
             else:
                 window['new_img_path'].update('Error')
 
