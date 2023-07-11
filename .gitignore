@@ -3,6 +3,7 @@ output/
 test/
 *.ttf
 test*.py
+test*
 tmp*
 
 # Byte-compiled / optimized / DLL files
