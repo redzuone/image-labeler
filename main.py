@@ -6,11 +6,24 @@ import shutil
 from paddleocr import PaddleOCR, draw_ocr
 import argparse
 import logging
+import io
+import base64
 
 ocr = None
 show_image_flag = False
 rename_file_flag = False
 manual_mode_flag = False
+
+class Image:
+    def __init__(self, image_path):
+        self.image_path = image_path
+        self.result = None
+        self.confidence = None
+        self.text = None
+        self.image_annotated = None
+        self.new_image_filename = None
+        self.new_image_path = None
+        self.test_val = None
 
 class ImageLabeler:
     def process_single_file(self, image, rename_file_flag=True):
@@ -29,14 +42,16 @@ class ImageLabeler:
                     self.rename_file(image)
                 else:
                     self.save_image(image)
+            return image
         except Exception as e:
             logging.error(f'An error occured: {e}')
             exit()
-    
+     
     def process_images_in_folder(self, image_folder_path, rename_file_flag=True):
         """
         Process all images in a folder
         """
+        processed_images = []
         # get all files in folder
         files = os.listdir(image_folder_path)
         # loop through files
@@ -45,12 +60,12 @@ class ImageLabeler:
             if is_supported_file(file):
                 image_path = os.path.join(image_folder_path, file)
                 image = Image(image_path)
-                processor.process_single_file(image, rename_file_flag)
-                #text, _ = process_single_file(image_name, rename_file_flag)
-                #save_image(image_name, text)
+                processed_image = self.process_single_file(image, rename_file_flag)
+                processed_images.append(processed_image)
             else:
                 print(f'----------------------------\n{file} is not an image')
                 continue
+        return processed_images
 
     def extract_text(self, image):
         """
@@ -78,7 +93,6 @@ class ImageLabeler:
             cleaned_text = cleaned_text[:200]
         image.text = cleaned_text
         logging.info(f'Cleaned text: {image.text}')
-        return image
     
     def save_image(self, image):
         """
@@ -113,20 +127,17 @@ class ImageLabeler:
         except Exception as e:
             logging.error(f'An error occured: {e}')
             exit()
-        #image.new_image_path = os.path.join(os.path.dirname(image.image_path), image.text + os.path.splitext(image.image_path)[1])
-        #os.rename(self.image_path, image.new_image_path)
-        #logging.info(f'File renamed to {image.new_image_path}')
     
     def save_image_box_gui(self, image):
         """
         Save temp image with bounding boxes
         """
         result = image.result[0]
-        image = ImageEdit.open(image.image_path).convert('RGB')
+        image_edit = ImageEdit.open(image.image_path).convert('RGB')
         boxes = [line[0] for line in result]
         txts = [line[1][0] for line in result]
         scores = [line[1][1] for line in result]
-        im_show = draw_ocr(image, boxes, txts, scores, font_path='Roboto-Regular.ttf')
+        im_show = draw_ocr(image_edit, boxes, txts, scores, font_path='Roboto-Regular.ttf')
         im_show = ImageEdit.fromarray(im_show)
 
         # Calculate new width based on new height and original aspect ratio
@@ -136,18 +147,8 @@ class ImageLabeler:
         
         # Resize image while maintaining aspect ratio
         im_show = im_show.resize((new_width, new_height))
-
         im_show.save('tmp.png')
-
-class Image:
-    def __init__(self, image_path):
-        self.image_path = image_path
-        self.result = None
-        self.confidence = None
-        self.text = None
-        self.image_annotated = None
-        self.new_image_filename = None
-        self.new_image_path = None
+        image.image_annotated = convert_to_bytes('tmp.png')
 
 def menu():
     """
@@ -161,7 +162,7 @@ def menu():
         processor.process_single_file(image)
     elif int(choice) == 2:
         folder_name = input('Enter folder name: ')
-        #process_images_in_folder(folder_name)
+        processor.process_images_in_folder(folder_name)
     elif int(choice) == 3:
         exit()
 
@@ -181,6 +182,36 @@ def load_model():
         logging.info('Loading model..')
         ocr = PaddleOCR(use_angle_cls=True, lang='en', show_log=False) # need to run only once to download and load model into memory
         logging.info('Model loaded')
+
+def convert_to_bytes(file_or_bytes, resize=None):
+    '''
+    Will convert into bytes and optionally resize an image that is a file or a base64 bytes object.
+    Turns into  PNG format in the process so that can be displayed by tkinter
+    :param file_or_bytes: either a string filename or a bytes base64 image object
+    :type file_or_bytes:  (Union[str, bytes])
+    :param resize:  optional new size
+    :type resize: (Tuple[int, int] or None)
+    :return: (bytes) a byte-string object
+    :rtype: (bytes)
+    '''
+    if isinstance(file_or_bytes, str):
+        img = ImageEdit.open(file_or_bytes)
+    else:
+        try:
+            img = ImageEdit.open(io.BytesIO(base64.b64decode(file_or_bytes)))
+        except Exception as e:
+            dataBytesIO = io.BytesIO(file_or_bytes)
+            img = ImageEdit.open(dataBytesIO)
+
+    cur_width, cur_height = img.size
+    if resize:
+        new_width, new_height = resize
+        scale = min(new_height/cur_height, new_width/cur_width)
+        img = img.resize((int(cur_width*scale), int(cur_height*scale)), ImageEdit.ANTIALIAS)
+    bio = io.BytesIO()
+    img.save(bio, format="PNG")
+    del img
+    return bio.getvalue()
 
 def show_image(img_path, result):
     """
