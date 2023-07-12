@@ -11,8 +11,6 @@ import base64
 
 ocr = None
 show_image_flag = False
-rename_file_flag = False
-manual_mode_flag = False
 
 class Image:
     def __init__(self, image_path):
@@ -23,10 +21,14 @@ class Image:
         self.image_annotated = None
         self.new_image_filename = None
         self.new_image_path = None
-        self.test_val = None
 
 class ImageLabeler:
-    def process_single_file(self, image, rename_file_flag=True):
+    def __init__(self):
+        self.copy_mode_flag = False
+        self.interactive_mode_flag = False
+        self.show_image_flag = False
+
+    def process_single_file(self, image):
         """
         Process a single image file
         """
@@ -37,17 +39,17 @@ class ImageLabeler:
         try:
             self.extract_text(image)
             self.save_image_box_gui(image)
-            if manual_mode_flag == False:
-                if rename_file_flag == True:
-                    self.rename_file(image)
-                else:
+            if self.interactive_mode_flag == False:
+                if self.copy_mode_flag == True:
                     self.save_image(image)
+                else:
+                    self.rename_file(image)
             return image
         except Exception as e:
             logging.error(f'An error occured: {e}')
             exit()
      
-    def process_images_in_folder(self, image_folder_path, rename_file_flag=True):
+    def process_images_in_folder(self, image_folder_path):
         """
         Process all images in a folder
         """
@@ -60,7 +62,7 @@ class ImageLabeler:
             if is_supported_file(file):
                 image_path = os.path.join(image_folder_path, file)
                 image = Image(image_path)
-                processed_image = self.process_single_file(image, rename_file_flag)
+                processed_image = self.process_single_file(image)
                 processed_images.append(processed_image)
             else:
                 print(f'----------------------------\n{file} is not an image')
@@ -159,6 +161,7 @@ def menu():
     if int(choice) == 1:
         image_path = input('Enter file name: ')
         image = Image(image_path)
+        processor.copy_mode_flag = False
         processor.process_single_file(image)
     elif int(choice) == 2:
         folder_name = input('Enter folder name: ')
@@ -213,38 +216,57 @@ def convert_to_bytes(file_or_bytes, resize=None):
     del img
     return bio.getvalue()
 
-def show_image(img_path, result):
+def show_image(image):
     """
     Show image with bounding boxes using matplotlib
     """
+    result = image.result
     result = result[0]
-    image = Image.open(img_path).convert('RGB')
+    image = ImageEdit.open(image.new_image_path).convert('RGB')
     boxes = [line[0] for line in result]
     txts = [line[1][0] for line in result]
     scores = [line[1][1] for line in result]
     im_show = draw_ocr(image, boxes, txts, scores, font_path='Roboto-Regular.ttf')
-    im_show = Image.fromarray(im_show)
+    im_show = ImageEdit.fromarray(im_show)
     # im_show.save('result.jpg')
     plt.imshow(im_show)
     plt.axis('off')
     plt.show()
 
+def rename_test_files():
+    folders = ['test/multiple/', 'test/']
+    for folder in folders:
+        folder_path = folder
+        files = os.listdir(folder_path)
+        supported_files = ['.jpg', '.png', '.jpeg', '.webp', '.heic']
+        for i, file in enumerate(files):
+            if file.endswith(tuple(supported_files)):
+                # new filename
+                if folder_path == 'test/':
+                    new_filename = f'test{os.path.splitext(file)[1]}'
+                else:
+                    new_filename = f'test{i}{os.path.splitext(file)[1]}'
+                os.rename(folder_path + file, folder_path + new_filename)
+
 if __name__ == '__main__':
+    rename_test_files()
+
     logging.basicConfig(level=logging.DEBUG, format='%(levelname)s: %(message)s')
     parser = argparse.ArgumentParser(description='Image Labeler')
     parser.add_argument('--dir', help='Folder name to process')
     parser.add_argument('--file', help='File name to process')
-    parser.add_argument('--rename', help='Rename file with extracted text', action='store_true')
+    parser.add_argument('--copy', help='Copy file with new filename instead of renaming', action='store_true')
     args = parser.parse_args()
     processor = ImageLabeler()
-    if args.rename:
-        rename_file_flag = True
+    if args.copy:
+        copy_mode_flag = True
 
     if args.dir:
         processor.process_images_in_folder(args.dir)
     elif args.file:
         image = Image(args.file)
-        processor.process_single_file(image, rename_file_flag)
+        processor.copy_mode_flag = False
+        processor.process_single_file(image)
     else:
         menu()
     exit()
