@@ -24,4 +24,5 @@ The program creates copies the image file with its new name by default.
 - PaddleOCR
 - PySimpleGUI
 
-![Demo](./demo.gif)
+# Demo
+![Demo](./demo.mp4)
