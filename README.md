@@ -25,4 +25,4 @@ The program creates copies the image file with its new name by default.
 - PySimpleGUI
 
 # Demo
-![Demo](./demo.mp4)
+https://raw.githubusercontent.com/redzuone/image-labeler/main/demo.mp4
