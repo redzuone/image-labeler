@@ -18,7 +18,7 @@ def main():
                 [sg.Checkbox('Interactive renaming mode', enable_events=True, key='interactive_mode_event')],
                 [sg.Text('Status: '), sg.Text('Ready', key='status')],
                 [sg.Col([[sg.Text('Results')]], scrollable=True, key='-COL-', s=(1280,720))],]
-    window = sg.Window('Image Labeler', layout, size=(1280, 720))
+    window = sg.Window('Image Labeler', layout, size=(900, 720))
     while True:
         event, values = window.read()
         if event == sg.WIN_CLOSED:
@@ -63,6 +63,7 @@ def main():
                 show_image(image)
         
         elif event.startswith('rename'):
+            logging.debug(f'Event: {event}')
             _, image_index_rename = event.split('_')
             image_index_rename = int(image_index_rename)
             image = images[image_index_rename]
@@ -87,19 +88,21 @@ def main():
                 window.perform_long_operation(lambda: processor.process_images_in_folder(folder_path), 'folder_done')
         
         elif event == 'folder_done':
-            window['status'].update('Done, files are saved in output folder')
+            logging.debug(f'Event: Folder done, image index is {image_index}')
+            window['status'].update('Done')
             processed_images = values[event]
             for image in processed_images:
                 images.append(image)
+                image = images[image_index]
+                logging.debug(f'Processed image index {image_index} {image.image_path}')
                 window.extend_layout(window['-COL-'], [[sg.Image(data=image.image_annotated, size=(None, 300))],
                                                    [sg.Text('File: ' + image.image_path)],
                                                    [sg.Text('Text: ' + image.text)],
                                                    [sg.Button('Rename file', key='rename_' + str(image_index), visible=False)],
                                                    [sg.Text('', key='new_image_path_label' + str(image_index))]])
+                if processor.interactive_mode_flag == True:
+                    window['rename_' + str(image_index)].update(visible=True)
                 image_index += 1
-            if processor.interactive_mode_flag == True:
-                for i in range(len(images)):
-                    window['rename_' + str(i)].update(visible=True)
             window.visibility_changed()
             window['-COL-'].contents_changed()
 
