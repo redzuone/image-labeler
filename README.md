@@ -25,4 +25,5 @@ The program creates copies the image file with its new name by default.
 - PySimpleGUI
 
 # Demo
-https://raw.githubusercontent.com/redzuone/image-labeler/main/demo.mp4
+https://github.com/redzuone/image-labeler/assets/21290781/d6e28d3d-5449-4946-89fe-346662877be8
+
